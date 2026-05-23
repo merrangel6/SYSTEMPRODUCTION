@@ -1,0 +1,146 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Panel de Supervisor";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Produccion diaria</p>
+        <h1>Panel de Supervisor</h1>
+    </div>
+    <div class="inline-actions">
+        <a class="btn btn-outline-primary" asp-page="/Herramientas/Asignaciones">Asignaciones</a>
+        <a class="btn btn-primary" asp-page="/OrdenesProduccion/Create">Nueva orden</a>
+    </div>
+</section>
+
+<div class="metric-grid">
+    <article class="metric-card">
+        <span>Ordenes activas</span>
+        <strong>@Model.ActiveOrders</strong>
+    </article>
+    <article class="metric-card">
+        <span>Piezas planeadas</span>
+        <strong>@Model.PlannedUnits</strong>
+    </article>
+    <article class="metric-card">
+        <span>Piezas producidas</span>
+        <strong>@Model.ProducedUnits</strong>
+    </article>
+    <article class="metric-card danger">
+        <span>Materiales bajo minimo</span>
+        <strong>@Model.LowStockMaterials</strong>
+    </article>
+    <article class="metric-card">
+        <span>Herramientas disponibles</span>
+        <strong>@Model.AvailableTools</strong>
+    </article>
+    <article class="metric-card">
+        <span>Empleados activos</span>
+        <strong>@Model.ActiveEmployees</strong>
+    </article>
+</div>
+
+<div class="content-grid">
+    <section class="panel chart-panel">
+        <div class="panel-header">
+            <h2>Grafica de produccion</h2>
+            <a asp-page="/Reportes/ExportarExcel">Exportar Excel</a>
+        </div>
+        <canvas id="productionChart"></canvas>
+    </section>
+
+    <section class="panel chart-panel">
+        <div class="panel-header">
+            <h2>Herramientas disponibles</h2>
+            <a asp-page="/Herramientas/Asignaciones">Asignar</a>
+        </div>
+        <canvas id="toolsChart"></canvas>
+    </section>
+</div>
+
+<div class="content-grid">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Ordenes recientes</h2>
+            <a asp-page="/OrdenesProduccion/Index">Ver todas</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Orden</th>
+                        <th>Producto</th>
+                        <th>Maquina</th>
+                        <th>Avance</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.RecentOrders)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@order.OrderNumber</td>
+                            <td>@order.Product?.Name</td>
+                            <td>@order.Machine?.Code</td>
+                            <td>@order.ProducedQuantity / @order.PlannedQuantity</td>
+                            <td><span class="status">@order.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Alertas de inventario</h2>
+            <a asp-page="/Inventario/Materiales">Gestionar</a>
+        </div>
+        @if (Model.LowStockList.Count == 0)
+        {
+            <p class="empty">Todos los materiales estan por encima del punto de reorden.</p>
+        }
+        else
+        {
+            <ul class="inventory-list">
+                @foreach (var material in Model.LowStockList)
+                {
+                    <li>
+                        <span>@material.Code - @material.Name</span>
+                        <strong>@material.Stock @material.Unit</strong>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const productionLabels = @Html.Raw(Model.ProductionChartLabelsJson);
+        const productionData = @Html.Raw(Model.ProductionChartDataJson);
+        const toolLabels = @Html.Raw(Model.ToolChartLabelsJson);
+        const toolData = @Html.Raw(Model.ToolChartDataJson);
+
+        new Chart(document.getElementById('productionChart'), {
+            type: 'bar',
+            data: {
+                labels: productionLabels,
+                datasets: [{ label: 'Cantidad planeada', data: productionData, backgroundColor: '#2563eb' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        new Chart(document.getElementById('toolsChart'), {
+            type: 'doughnut',
+            data: {
+                labels: toolLabels,
+                datasets: [{ label: 'Disponibles', data: toolData, backgroundColor: ['#16a34a', '#f59e0b', '#0f766e', '#7c3aed'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    </script>
+}
